@@ -82,5 +82,47 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libzip-dev \
     memcached \
     redis-server \
-  && apt-get --purge autoremove language-pack-en-base -y \
+  && apt-get --purge autoremove language-pack-en-base -y
+
+# Install drush
+RUN wget -O /usr/local/bin/drush https://github.com/drush-ops/drush/releases/download/8.1.11/drush.phar \
+  && chmod +x /usr/local/bin/drush \
+  && mkdir /etc/drush \
+  && mkdir /etc/drush/conf.d \
+  && chmod -R 755 /etc/drush/conf.d
+
+ADD drushrc.php /etc/drush/drushrc.php
+ADD drush-environment.php /etc/drush/conf.d/environment.php
+
+# Install drupal console
+RUN curl https://drupalconsole.com/installer -L -o /tmp/drupal.phar \
+  && mv /tmp/drupal.phar /usr/local/bin/drupal \
+  && chmod +x /usr/local/bin/drupal
+
+# Install composer
+ADD install-composer /root/install-composer
+RUN chmod +x /root/install-composer \
+  && /root/install-composer
+
+# Install Ruby gems
+RUN apt-get update \
+  && apt-get install -y ruby-dev \
+  ruby-compass \
+  && gem install bundler
+
+# Install wp-cli
+RUN wget -O /usr/local/bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+  && chmod 755 /usr/local/bin/wp
+
+# Install and configure solr.
+ADD zivtechaptrepo /etc/apt/sources.list.d/zivtechaptrepo.list
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 02e048f5 \
+  && add-apt-repository ppa:openjdk-r/ppa \
+  && apt-get update \
+  && apt-get install -y openjdk-8-jre \
+  solr \
   && rm -rf /var/lib/apt/lists/* /tmp/*
+
+ADD create-solr-instance /usr/local/bin/create-solr-instance
+ADD remove-solr-instance /usr/local/bin/remove-solr-instance
+RUN chmod +x /usr/local/bin/create-solr-instance /usr/local/bin/remove-solr-instance
