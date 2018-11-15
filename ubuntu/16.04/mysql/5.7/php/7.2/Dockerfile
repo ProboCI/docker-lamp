@@ -17,14 +17,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install apache2 \
     lynx-cur
 
 # Enable apache mods.
-RUN phpenmod openssl
 RUN a2enmod rewrite
-
-# Update the PHP.ini file, enable <? ?> tags and quieten logging.
-RUN sed -i "s/short_open_tag = Off/short_open_tag = On/" /etc/php/7.2/apache2/php.ini
-RUN sed -i "s/error_reporting = .*$/error_reporting = E_ERROR | E_WARNING | E_PARSE/" /etc/php/7.2/apache2/php.ini
-
-# Need to set values from https://github.com/ProboCI/probo-image-builder/blob/master/ansible/roles/ubuntu-php-7.0/tasks/php-ini.yml
 
 # Manually set up the apache environment variables
 ENV APACHE_RUN_USER www-data
@@ -62,6 +55,12 @@ RUN { \
   && mysqladmin -u root --skip-password password 'MYSQL_PASSWORD' \
   && service mysql stop \
   && rm -rf /var/lib/apt/lists/*
+
+# Update the PHP.ini file, enable <? ?> tags and quieten logging.
+RUN sed -i "s/short_open_tag = Off/short_open_tag = On/" /etc/php/7.2/apache2/php.ini
+RUN sed -i "s/error_reporting = .*$/error_reporting = E_ERROR | E_WARNING | E_PARSE/" /etc/php/7.2/apache2/php.ini
+
+# Need to set values from https://github.com/ProboCI/probo-image-builder/blob/master/ansible/roles/ubuntu-php-7.0/tasks/php-ini.yml
 
 VOLUME /var/lib/mysql
 
@@ -121,6 +120,9 @@ RUN wget -O /usr/local/bin/drush https://github.com/drush-ops/drush/releases/dow
 
 ADD drushrc.php /etc/drush/drushrc.php
 ADD drush-environment.php /etc/drush/conf.d/environment.php
+
+# Enable php modules.
+RUN phpenmod openssl
 
 # Install drupal console
 RUN curl https://drupalconsole.com/installer -L -o /tmp/drupal.phar \
