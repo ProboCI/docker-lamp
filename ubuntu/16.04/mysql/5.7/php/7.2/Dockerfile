@@ -4,15 +4,8 @@ FROM proboci/ubuntu:16.04
 RUN apt-get update
 RUN apt-get -y upgrade
 
-# Install apache, PHP, and supplimentary programs. curl and lynx-cur are for debugging the container.
+# Install apache. Curl and lynx-cur are for debugging the container.
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install apache2 \
-    libapache2-mod-php \
-    php-mysql \
-    php-gd \
-    php-pear \
-    php-curl \
-    php-ldap \
-    php-pgsql \
     curl \
     lynx-cur
 
@@ -56,12 +49,6 @@ RUN { \
   && service mysql stop \
   && rm -rf /var/lib/apt/lists/*
 
-# Update the PHP.ini file, enable <? ?> tags and quieten logging.
-RUN sed -i "s/short_open_tag = Off/short_open_tag = On/" /etc/php/7.2/apache2/php.ini
-RUN sed -i "s/error_reporting = .*$/error_reporting = E_ERROR | E_WARNING | E_PARSE/" /etc/php/7.2/apache2/php.ini
-
-# Need to set values from https://github.com/ProboCI/probo-image-builder/blob/master/ansible/roles/ubuntu-php-7.0/tasks/php-ini.yml
-
 VOLUME /var/lib/mysql
 
 EXPOSE 3306/tcp
@@ -104,6 +91,15 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     redis-server \
   && apt-get --purge autoremove language-pack-en-base -y
 
+# Update the PHP.ini file, enable <? ?> tags and quieten logging.
+RUN sed -i "s/short_open_tag = Off/short_open_tag = On/" /etc/php/7.2/apache2/php.ini
+RUN sed -i "s/error_reporting = .*$/error_reporting = E_ERROR | E_WARNING | E_PARSE/" /etc/php/7.2/apache2/php.ini
+
+# Enable php modules.
+RUN phpenmod openssl
+
+# Need to set values from https://github.com/ProboCI/probo-image-builder/blob/master/ansible/roles/ubuntu-php-7.0/tasks/php-ini.yml
+
 # Create php log dir
 RUN mkdir /var/log/php \
   && touch /var/log/php/error.log \
@@ -120,9 +116,6 @@ RUN wget -O /usr/local/bin/drush https://github.com/drush-ops/drush/releases/dow
 
 ADD drushrc.php /etc/drush/drushrc.php
 ADD drush-environment.php /etc/drush/conf.d/environment.php
-
-# Enable php modules.
-RUN phpenmod openssl
 
 # Install drupal console
 RUN curl https://drupalconsole.com/installer -L -o /tmp/drupal.phar \

@@ -3,27 +3,14 @@ FROM proboci/ubuntu:16.04
 RUN apt-get update
 RUN apt-get -y upgrade
 
-# Install apache, PHP, and supplimentary programs. curl and lynx-cur are for debugging the container.
+# Install apache. Curl and lynx-cur are for debugging the container.
 RUN DEBIAN_FRONTEND=noninteractive apt-get -y install apache2 \
-    libapache2-mod-php \
-    php-mysql \
-    php-gd \
-    php-pear \
-    php-curl \
-    php-ldap \
-    php-pgsql \
     curl \
     lynx-cur
 
 # Enable apache mods.
-RUN phpenmod openssl
+
 RUN a2enmod rewrite
-
-# Update the PHP.ini file, enable <? ?> tags and quieten logging.
-RUN sed -i "s/short_open_tag = Off/short_open_tag = On/" /etc/php/7.0/apache2/php.ini
-RUN sed -i "s/error_reporting = .*$/error_reporting = E_ERROR | E_WARNING | E_PARSE/" /etc/php/7.0/apache2/php.ini
-
-# Need to set values from https://github.com/ProboCI/probo-image-builder/blob/master/ansible/roles/ubuntu-php-7.0/tasks/php-ini.yml
 
 # Manually set up the apache environment variables
 ENV APACHE_RUN_USER www-data
@@ -103,6 +90,15 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     memcached \
     redis-server \
   && apt-get --purge autoremove language-pack-en-base -y
+
+# Update the PHP.ini file, enable <? ?> tags and quieten logging.
+RUN sed -i "s/short_open_tag = Off/short_open_tag = On/" /etc/php/7.0/apache2/php.ini
+RUN sed -i "s/error_reporting = .*$/error_reporting = E_ERROR | E_WARNING | E_PARSE/" /etc/php/7.0/apache2/php.ini
+
+# Need to set values from https://github.com/ProboCI/probo-image-builder/blob/master/ansible/roles/ubuntu-php-7.0/tasks/php-ini.yml
+
+# Enable php mods.
+RUN phpenmod openssl
 
 # Create php log dir
 RUN mkdir /var/log/php \
