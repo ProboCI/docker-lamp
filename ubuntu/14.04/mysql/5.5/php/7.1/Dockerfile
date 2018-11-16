@@ -1,29 +1,12 @@
 FROM proboci/ubuntu:14.04
 
-
-RUN apt-get update
-RUN apt-get -y upgrade
-
-# Install apache, PHP, and supplimentary programs. curl and lynx-cur are for debugging the container.
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y install apache2 \
-    libapache2-mod-php5 \
-    php5-mysql \
-    php5-gd \
-    php-pear \
-    php-apc \
-    php5-curl \
-    php5-ldap \
+# Install apache and enable mods.
+# Curl and lynx-cur are for debugging the container.
+RUN apt-get update && apt-get -y upgrade \
+  && DEBIAN_FRONTEND=noninteractive apt-get -y install apache2 \
     curl \
-    lynx-cur
-
-# Enable apache mods.
-RUN php5enmod openssl
-RUN a2enmod php5
-RUN a2enmod rewrite
-
-# Update the PHP.ini file, enable <? ?> tags and quieten logging.
-RUN sed -i "s/short_open_tag = Off/short_open_tag = On/" /etc/php5/apache2/php.ini
-RUN sed -i "s/error_reporting = .*$/error_reporting = E_ERROR | E_WARNING | E_PARSE/" /etc/php5/apache2/php.ini
+    lynx-cur \
+  && a2enmod rewrite
 
 # Manually set up the apache environment variables
 ENV APACHE_RUN_USER www-data
@@ -45,16 +28,26 @@ ENV MYSQL_USER=mysql \
     MYSQL_DATA_DIR=/var/lib/mysql \
     MYSQL_RUN_DIR=/run/mysqld \
     MYSQL_LOG_DIR=/var/log/mysql
+    MYSQL_PASSWORD=strongpassword
 
-RUN apt-get update \
+# Install MySQL
+RUN { \
+    echo mysql-community-server mysql-community-server/data-dir select ''; \
+    echo mysql-community-server mysql-community-server/root-pass password ''; \
+    echo mysql-community-server mysql-community-server/re-root-pass password ''; \
+    echo mysql-community-server mysql-community-server/remove-test-db select false; \
+  } | debconf-set-selections \
+  && apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server-${MYSQL_VERSION} \
+  && service mysql start \
+  && mysqladmin -u root --skip-password password $MYSQL_PASSWORD \
+  && service mysql stop \
   && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 3306/tcp
-
-ENV PHP_VERSION 5.6
+ENV PHP_VERSION 7.1
 ENV WORKDIR /root
 
+# Install PHP and enable mods.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 	language-pack-en-base \
   && LC_ALL=en_US.UTF-8 add-apt-repository ppa:ondrej/php \
@@ -74,7 +67,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     php$PHP_VERSION-xml \
     php$PHP_VERSION-zip \
     libapache2-mod-php$PHP_VERSION \
-    php5-imagick \
+    php-imagick \
     php-pear \
     php-redis \
     php-uploadprogress \
@@ -83,6 +76,13 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     memcached \
     redis-server \
   && apt-get --purge autoremove language-pack-en-base -y
+
+# Update the PHP.ini file, enable <? ?> tags and quieten logging.
+RUN sed -i "s/short_open_tag = Off/short_open_tag = On/" /etc/php/$PHP_VERSION/apache2/php.ini
+RUN sed -i "s/error_reporting = .*$/error_reporting = E_ERROR | E_WARNING | E_PARSE/" /etc/php/$PHP_VERSION/apache2/php.ini
+
+# Enable php mods.
+RUN phpenmod openssl
 
 # Install drush
 RUN wget -O /usr/local/bin/drush https://github.com/drush-ops/drush/releases/download/8.1.11/drush.phar \

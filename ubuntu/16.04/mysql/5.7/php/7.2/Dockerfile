@@ -1,13 +1,12 @@
 FROM proboci/ubuntu:16.04
 
-
-RUN apt-get update
-RUN apt-get -y upgrade
-
-# Install apache. Curl and lynx-cur are for debugging the container.
-RUN DEBIAN_FRONTEND=noninteractive apt-get -y install apache2 \
+# Install apache and enable mods.
+# Curl and lynx-cur are for debugging the container.
+RUN apt-get update && apt-get -y upgrade \
+  && DEBIAN_FRONTEND=noninteractive apt-get -y install apache2 \
     curl \
-    lynx-cur
+    lynx-cur \
+  && a2enmod rewrite
 
 # Enable apache mods.
 RUN a2enmod rewrite
@@ -45,13 +44,11 @@ RUN { \
   && mkdir $MYSQL_RUN_DIR \
   && chown -R $MYSQL_USER:$MYSQL_USER $MYSQL_DATA_DIR $MYSQL_RUN_DIR \
   && service mysql start \
-  && mysqladmin -u root --skip-password password 'MYSQL_PASSWORD' \
+  && mysqladmin -u root --skip-password password $MYSQL_PASSWORD \
   && service mysql stop \
   && rm -rf /var/lib/apt/lists/*
 
 VOLUME /var/lib/mysql
-
-EXPOSE 3306/tcp
 
 ENV PHP_VERSION 7.2
 ENV WORKDIR /root
@@ -92,8 +89,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
   && apt-get --purge autoremove language-pack-en-base -y
 
 # Update the PHP.ini file, enable <? ?> tags and quieten logging.
-RUN sed -i "s/short_open_tag = Off/short_open_tag = On/" /etc/php/7.2/apache2/php.ini
-RUN sed -i "s/error_reporting = .*$/error_reporting = E_ERROR | E_WARNING | E_PARSE/" /etc/php/7.2/apache2/php.ini
+RUN sed -i "s/short_open_tag = Off/short_open_tag = On/" /etc/php/$PHP_VERSION/apache2/php.ini
+RUN sed -i "s/error_reporting = .*$/error_reporting = E_ERROR | E_WARNING | E_PARSE/" /etc/php/$PHP_VERSION/apache2/php.ini
 
 # Enable php modules.
 RUN phpenmod openssl

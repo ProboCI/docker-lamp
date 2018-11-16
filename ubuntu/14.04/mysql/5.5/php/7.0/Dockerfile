@@ -1,13 +1,12 @@
 FROM proboci/ubuntu:14.04
 
-# Install apache, PHP, and supplementary programs. curl and lynx-cur are for debugging the container.
+# Install apache and enable mods.
+# Curl and lynx-cur are for debugging the container.
 RUN apt-get update && apt-get -y upgrade \
   && DEBIAN_FRONTEND=noninteractive apt-get -y install apache2 \
     curl \
-    lynx-cur
-
-# Enable apache mods.
-RUN a2enmod rewrite
+    lynx-cur \
+  && a2enmod rewrite
 
 # Manually set up the apache environment variables
 ENV APACHE_RUN_USER www-data
@@ -29,9 +28,19 @@ ENV MYSQL_USER=mysql \
     MYSQL_DATA_DIR=/var/lib/mysql \
     MYSQL_RUN_DIR=/run/mysqld \
     MYSQL_LOG_DIR=/var/log/mysql
+    MYSQL_PASSWORD=strongpassword
 
-RUN apt-get update \
+RUN { \
+    echo mysql-community-server mysql-community-server/data-dir select ''; \
+    echo mysql-community-server mysql-community-server/root-pass password ''; \
+    echo mysql-community-server mysql-community-server/re-root-pass password ''; \
+    echo mysql-community-server mysql-community-server/remove-test-db select false; \
+  } | debconf-set-selections \
+  && apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server-${MYSQL_VERSION} \
+  && service mysql start \
+  && mysqladmin -u root --skip-password password $MYSQL_PASSWORD \
+  && service mysql stop \
   && rm -rf /var/lib/apt/lists/*
 
 ENV PHP_VERSION 7.0

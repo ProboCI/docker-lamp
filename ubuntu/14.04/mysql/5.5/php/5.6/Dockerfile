@@ -50,8 +50,6 @@ RUN apt-get update \
   && DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server-${MYSQL_VERSION} \
   && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 3306/tcp
-
 ENV PHP_VERSION 5.6
 ENV WORKDIR /root
 
